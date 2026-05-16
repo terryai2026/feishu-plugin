@@ -23,7 +23,13 @@ npm install
 
 ## 配置
 
-创建 `config.json`（参考 `config.json.example`）：
+### 1. 创建配置文件
+
+```bash
+cp config.json.example config.json
+```
+
+### 2. 编辑 config.json
 
 ```json
 {
@@ -33,27 +39,41 @@ npm install
   },
   "claude": {
     "api_key": "your_claude_api_key",
-    "base_url": "https://api.anthropic.com",
-    "model": "claude-3-5-sonnet-20241022"
+    "base_url": "https://api.53hk.cn",
+    "model": "MiniMax-M2.7-highspeed"
   },
-  "projects_root": "/path/to/projects"
+  "projects_root": "/Users/terry/.claude/projects"
 }
 ```
 
-### 飞书应用配置
+**配置说明：**
 
-1. 在 [飞书开放平台](https://open.feishu.cn/) 创建应用
-2. 获取 `App ID` 和 `App Secret`
-3. 添加「机器人」能力
-4. 配置事件订阅（长连接模式）
-5. 添加事件：`im.message.receive_v1`
+| 配置项 | 说明 |
+|--------|------|
+| `feishu.app_id` | 飞书应用 App ID |
+| `feishu.app_secret` | 飞书应用 App Secret |
+| `claude.api_key` | Claude API 密钥 |
+| `claude.base_url` | Claude API 地址 |
+| `claude.model` | 使用的模型 |
+| `projects_root` | 项目根目录 |
+
+### 3. 飞书应用配置
+
+在 [飞书开放平台](https://open.feishu.cn/)：
+
+1. 创建自建应用，获取 `App ID` 和 `App Secret`
+2. 添加「机器人」能力
+3. 配置事件订阅：
+   - 进入「事件与回调」→「订阅方式」
+   - 选择「使用长连接接收事件」
+4. 添加事件：`im.message.receive_v1`
 
 ## 启动 Bot
 
 Bot 需要长期运行，用于接收飞书消息并回复：
 
 ```bash
-# 方式1：使用启动脚本
+# 方式1：使用启动脚本（推荐）
 ./start.sh
 
 # 方式2：直接运行
@@ -67,7 +87,8 @@ nohup ./start.sh > bot.log 2>&1 &
 
 ### 1. 在飞书中与机器人对话
 
-添加机器人后，直接发送消息即可获得 AI 助手回复。
+1. 打开飞书，找到您的自建应用机器人
+2. 向机器人发送消息即可获得 AI 助手回复
 
 **支持的命令：**
 - `项目列表` - 查看所有项目
@@ -79,7 +100,7 @@ nohup ./start.sh > bot.log 2>&1 &
 ```javascript
 import { sendTextMessage, getAccessToken } from 'feishu-tool/api';
 
-// 发送消息
+// 发送消息（需要 chat_id）
 await sendTextMessage('oc_xxxxx', '任务完成！');
 
 // 获取访问令牌
@@ -104,12 +125,19 @@ feishu-plugin/
 └── package.json
 ```
 
-## Bot 与插件的关系
+## 常见问题
 
-- **Bot** (`bot/`) - 长期运行的进程，通过 WebSocket 长连接接收飞书消息
-- **Plugin** (`api/`) - 供 Claude Code 调用的 API，可发送消息等
+### Bot 收不到消息
 
-两者共用同一份 `config.json` 配置。
+1. 确认飞书应用已添加「机器人」能力
+2. 确认已配置「长连接模式」接收事件
+3. 确认已添加 `im.message.receive_v1` 事件
+4. 检查 Bot 是否正在运行：`ps aux | grep "node bot"`
+
+### 消息发送失败
+
+1. 确认 `config.json` 中的 `app_id` 和 `app_secret` 正确
+2. 确认飞书应用的机器人能力已启用
 
 ## 部署到服务器
 

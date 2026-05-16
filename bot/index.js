@@ -5,11 +5,10 @@
  * 启动方式: node bot/index.js 或 ./start.sh
  */
 
+import * as Lark from '@larksuiteoapi/node-sdk';
 import { FEISHU } from './config.js';
 import { sendTextMessage, getAccessToken } from './feishu-api.js';
 import { chatWithClaude } from './claude-api.js';
-
-const { SDK } = await import('@larksuiteoapi/node-sdk');
 
 // 验证配置
 if (!FEISHU.APP_ID || !FEISHU.APP_SECRET) {
@@ -18,15 +17,12 @@ if (!FEISHU.APP_ID || !FEISHU.APP_SECRET) {
   process.exit(1);
 }
 
-// 创建 SDK 实例
-const sdk = new SDK({
+// 创建客户端
+const wsClient = new Lark.WSClient({
   appId: FEISHU.APP_ID,
   appSecret: FEISHU.APP_SECRET,
-  loggerLevel: 1
+  loggerLevel: Lark.LoggerLevel.info
 });
-
-// 长连接客户端
-const client = sdk.ws;
 
 // 启动时间（用于过滤旧消息）
 const BOT_START_TIME = Date.now();
@@ -40,10 +36,10 @@ const recentMessages = new Map();
 function parseMessageContent(contentStr) {
   try {
     const content = JSON.parse(contentStr);
-    if (content.msg_type === 'text') {
-      return content.text?.content?.trim();
+    if (content.text) {
+      return content.text.trim();
     }
-    return null;
+    return JSON.stringify(content);
   } catch {
     return contentStr;
   }
@@ -75,89 +71,101 @@ function isDuplicate(messageId, content, timestamp) {
  * 处理消息事件
  */
 async function handleMessage(data) {
-  const { message } = data;
-
-  // 只处理私聊消息，且来自用户（非机器人）
-  if (message?.chat_type !== 'p2p' || message?.sender?.sender_type !== 'user') {
-    return;
-  }
+  const message = data.message;
+  if (!message) return;
 
   const messageId = message.message_id;
-  const userId = message.sender.open_id;
+  const chatType = message.chat_type;
+  const chatId = message.chat_id;
   const content = parseMessageContent(message.content);
-  const timestamp = message.create_time;
+  const messageTime = parseInt(message.create_time) || 0;
 
-  if (!content) return;
+  console.log('\n========== 收到事件 ==========');
+  console.log(`message_id: ${messageId}`);
+  console.log(`chat_type: ${chatType}`);
+  console.log(`content: ${content}`);
+  console.log(`消息时间: ${new Date(messageTime).toLocaleString()}`);
 
-  // 过滤启动前的消息
-  if (timestamp && timestamp < BOT_START_TIME) {
-    console.log(`⏭️ 跳过旧消息: ${content.substring(0, 30)}...`);
+  // 检查消息是否太旧（机器人启动前的消息跳过）
+  if (messageTime > 0 && messageTime < BOT_START_TIME) {
+    console.log(`⚠️ 消息早于机器人启动时间，跳过`);
+    console.log('========== 跳过 ==========\n');
     return;
   }
 
-  // 去重
-  if (isDuplicate(messageId, content, timestamp)) {
-    console.log(`⏭️ 跳过重复消息: ${content.substring(0, 30)}...`);
+  // 去重检查
+  if (isDuplicate(messageId, content, messageTime)) {
+    console.log('========== 跳过 ==========\n');
     return;
   }
 
-  console.log(`\n📩 收到用户 ${userId}: ${content}`);
-
-  await processUserMessage(userId, content);
+  // 只处理 P2P 私聊
+  if (chatType === 'p2p' && content) {
+    console.log(`✅ 收到私聊消息: "${content}"`);
+    handleMessageAsync(chatId, content, messageId).then(() => {
+      console.log('========== 处理结束 ==========\n');
+    }).catch(err => {
+      console.log('========== 处理异常结束 ==========\n');
+    });
+  }
 }
 
 /**
- * 处理用户消息
+ * 异步处理消息（不阻塞，快速返回）
  */
-async function processUserMessage(userId, userMessage) {
+async function handleMessageAsync(receiveId, userMessage, messageId) {
   try {
-    console.log(`[Claude] 正在处理...`);
-
-    const response = await chatWithClaude(userMessage, userId);
-
-    // 长消息分段发送
-    await sendLongMessage(userId, response);
-
-    console.log(`[Claude] 回复已发送`);
-
+    console.log(`🤖 正在调用 Claude...`);
+    const response = await chatWithClaude(userMessage, receiveId);
+    console.log(`📤 Claude 回复 (${response.length} 字符)，准备发送...`);
+    await sendLongMessage(receiveId, response);
+    console.log(`✅ 处理完成`);
   } catch (error) {
-    console.error('[错误]', error.message);
-
+    console.error(`❌ 处理错误: ${error.message}`);
     try {
-      await sendTextMessage(userId, `处理消息时出错: ${error.message}`);
+      await sendTextMessage(receiveId, `处理消息时出错: ${error.message}完毕`);
     } catch (e) {
-      console.error('[发送失败]', e.message);
+      console.error(`❌ 发送失败: ${e.message}`);
     }
   }
 }
 
 /**
- * 发送长消息（自动分段）
+ * 发送长消息，自动分多条发送
  */
-async function sendLongMessage(receiveId, text, maxLength = 2048) {
-  if (text.length <= maxLength) {
-    await sendTextMessage(receiveId, text);
+async function sendLongMessage(receiveId, message) {
+  const MAX_LENGTH = 500;
+
+  // 消息已经自带「完毕」，不需要再添加
+  if (message.length <= MAX_LENGTH) {
+    await sendTextMessage(receiveId, message);
     return;
   }
 
-  // 按段落分割
-  const paragraphs = text.split('\n\n');
+  const paragraphs = message.split('\n\n');
   let currentChunk = '';
+  const chunks = [];
 
-  for (const paragraph of paragraphs) {
-    if ((currentChunk + '\n\n' + paragraph).length <= maxLength) {
-      currentChunk = currentChunk ? currentChunk + '\n\n' + paragraph : paragraph;
+  for (const para of paragraphs) {
+    if ((currentChunk + '\n\n' + para).length > MAX_LENGTH && currentChunk) {
+      chunks.push(currentChunk);
+      currentChunk = para;
+    } else if (currentChunk) {
+      currentChunk += '\n\n' + para;
     } else {
-      if (currentChunk) {
-        await sendTextMessage(receiveId, currentChunk);
-        await sleep(500);
-      }
-      currentChunk = paragraph;
+      currentChunk = para;
     }
   }
+  if (currentChunk) chunks.push(currentChunk);
 
-  if (currentChunk) {
-    await sendTextMessage(receiveId, currentChunk);
+  console.log(`📤 分 ${chunks.length} 条发送`);
+
+  for (let i = 0; i < chunks.length; i++) {
+    const isLast = (i === chunks.length - 1);
+    const messageToSend = isLast ? chunks[i] : chunks[i];
+    console.log(`   第 ${i + 1}/${chunks.length} 条 (${messageToSend.length} 字符)${isLast ? ' [完毕]' : ''}`);
+    await sendTextMessage(receiveId, messageToSend);
+    if (!isLast) await sleep(500);
   }
 }
 
@@ -186,10 +194,12 @@ async function main() {
     console.log('   - 发送"项目进度 [项目名]"查看具体进度');
     console.log('\n' + '='.repeat(50) + '\n');
 
-    // 注册事件处理
-    client.createEventHandler({
-      'im.message.receive_v1': handleMessage
-    }).register().start();
+    // 注册事件处理并启动
+    wsClient.start({
+      eventDispatcher: new Lark.EventDispatcher({}).register({
+        'im.message.receive_v1': handleMessage
+      })
+    });
 
     console.log('[✓] 机器人已启动，等待消息...');
 

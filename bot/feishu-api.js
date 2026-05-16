@@ -66,7 +66,7 @@ export async function sendMessage(receiveId, msgType, content, receiveIdType = '
 /**
  * 发送文本消息
  */
-export async function sendTextMessage(receiveId, text, receiveIdType = 'open_id') {
+export async function sendTextMessage(receiveId, text, receiveIdType = 'chat_id') {
   return sendMessage(receiveId, 'text', { text }, receiveIdType);
 }
 
