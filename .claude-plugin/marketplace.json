@@ -1,0 +1,26 @@
+{
+  "name": "feishu-tool",
+  "version": "1.0.0",
+  "description": "飞书工具集 - 发送消息、查询项目进度、任务通知",
+  "author": {
+    "name": "Terry"
+  },
+  "commands": [
+    {
+      "name": "feishu-send",
+      "description": "发送飞书消息",
+      "usage": "/feishu-send <chat_id> <message>"
+    },
+    {
+      "name": "feishu-status",
+      "description": "查询项目进度",
+      "usage": "/feishu-status <项目名>"
+    }
+  ],
+  "skills": [
+    {
+      "name": "feishu-notify",
+      "description": "飞书通知技能 - 用于项目状态变更通知"
+    }
+  ]
+}

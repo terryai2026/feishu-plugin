@@ -1,0 +1,39 @@
+{
+  "name": "feishu-tool",
+  "version": "1.0.0",
+  "description": "飞书工具集 - 发送消息、查询项目进度、任务管理",
+  "author": "Terry",
+  "homepage": "https://github.com/terry/feishu-tool",
+  "tools": {
+    "sendFeishuMessage": {
+      "description": "发送飞书消息给用户",
+      "input": {
+        "type": "object",
+        "properties": {
+          "chatId": {
+            "type": "string",
+            "description": "飞书会话 ID（chat_id）"
+          },
+          "message": {
+            "type": "string",
+            "description": "要发送的消息内容"
+          }
+        },
+        "required": ["chatId", "message"]
+      }
+    },
+    "getFeishuProjectStatus": {
+      "description": "查询项目进度状态",
+      "input": {
+        "type": "object",
+        "properties": {
+          "projectName": {
+            "type": "string",
+            "description": "项目名称（如 AI-CRM、drift-bottle 等）"
+          }
+        },
+        "required": ["projectName"]
+      }
+    }
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "feishu-tool",
+  "version": "1.0.0",
+  "description": "飞书工具集 - 在 Claude Code 中发送飞书消息",
+  "main": "api/index.js",
+  "type": "module",
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.9.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

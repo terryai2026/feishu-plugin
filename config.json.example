@@ -1,0 +1,13 @@
+{
+  "feishu": {
+    "app_id": "cli_your_app_id",
+    "app_secret": "your_app_secret",
+    "api_base": "https://open.feishu.cn/open-apis"
+  },
+  "projects_root": "/Users/terry/.claude/projects",
+  "claude": {
+    "api_key": "your_claude_api_key",
+    "base_url": "https://api.53hk.cn",
+    "model": "MiniMax-M2.7-highspeed"
+  }
+}
