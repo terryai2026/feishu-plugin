@@ -1,9 +1,13 @@
 {
   "name": "feishu-tool",
   "version": "1.0.0",
-  "description": "飞书工具集 - 在 Claude Code 中发送飞书消息",
+  "description": "飞书工具集 - AI 智能助手与项目进度管理",
   "main": "api/index.js",
   "type": "module",
+  "scripts": {
+    "start": "node bot/index.js",
+    "bot": "node bot/index.js"
+  },
   "dependencies": {
     "@larksuiteoapi/node-sdk": "^1.9.0"
   },

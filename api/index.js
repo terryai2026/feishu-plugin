@@ -5,7 +5,7 @@
  * import { sendTextMessage, getAccessToken } from 'feishu-tool/api';
  */
 
-import { sendTextMessage, getAccessToken, sendPostMessage } from './feishu-api.js';
+import { sendTextMessage, sendPostMessage, getAccessToken } from './feishu-api.js';
 
 export {
   sendTextMessage,

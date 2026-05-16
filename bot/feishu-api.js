@@ -1,4 +1,4 @@
-import { FEISHU } from './config-loader.js';
+import { FEISHU } from './config.js';
 
 let accessToken = null;
 let tokenExpireTime = 0;
@@ -41,11 +41,6 @@ export async function getAccessToken() {
 export async function sendMessage(receiveId, msgType, content, receiveIdType = 'open_id') {
   const token = await getAccessToken();
 
-  console.log(`📡 发送消息 API 调用:`);
-  console.log(`   URL: ${FEISHU.API_BASE}/im/v1/messages?receive_id_type=${receiveIdType}`);
-  console.log(`   receive_id: ${receiveId}`);
-  console.log(`   msg_type: ${msgType}`);
-
   const response = await fetch(`${FEISHU.API_BASE}/im/v1/messages?receive_id_type=${receiveIdType}`, {
     method: 'POST',
     headers: {
@@ -60,7 +55,6 @@ export async function sendMessage(receiveId, msgType, content, receiveIdType = '
   });
 
   const data = await response.json();
-  console.log(`   响应: ${JSON.stringify(data)}`);
 
   if (data.code !== 0) {
     throw new Error(`发送消息失败: ${data.msg}`);
@@ -95,25 +89,6 @@ export async function sendPostMessage(receiveId, title, paragraphs, receiveIdTyp
   };
 
   return sendMessage(receiveId, 'post', content, receiveIdType);
-}
-
-/**
- * 获取群成员列表
- */
-export async function getChatMembers(chatId) {
-  const token = await getAccessToken();
-
-  const response = await fetch(`${FEISHU.API_BASE}/im/v1/chats/${chatId}/members?member_id_type=open_id`, {
-    headers: { 'Authorization': `Bearer ${token}` }
-  });
-
-  const data = await response.json();
-
-  if (data.code !== 0) {
-    throw new Error(`获取群成员失败: ${data.msg}`);
-  }
-
-  return data.data.items;
 }
 
 /**
