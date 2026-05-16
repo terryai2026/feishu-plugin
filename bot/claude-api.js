@@ -41,7 +41,7 @@ export async function chatWithClaude(userMessage, userId = 'unknown', chatHistor
   } catch (error) {
     clearTimeout(timeoutId);
     if (retryCount < 1 && (error.name === 'AbortError' || error.message.includes('timeout'))) {
-      console.log(`⏳ 超时，${retryCount + 1}次重试...`);
+      console.log(`⏳ 网络超时，${retryCount + 1}次重试...`);
       return chatWithClaude(userMessage, userId, chatHistory, retryCount + 1);
     }
     throw new Error(`请求失败: ${error.message}`);
@@ -53,13 +53,16 @@ export async function chatWithClaude(userMessage, userId = 'unknown', chatHistor
     const errorText = await response.text();
     let errorMsg = `Claude API 错误: ${response.status}`;
 
-    if ((response.status === 524 || response.status === 504) && retryCount < 1) {
-      console.log(`⏳ API超时，${retryCount + 1}次重试...`);
+    // 524/504 超时 和 502 上游错误 重试一次
+    if ((response.status === 524 || response.status === 504 || response.status === 502) && retryCount < 1) {
+      console.log(`⏳ API错误 ${response.status}，${retryCount + 1}次重试...`);
       return chatWithClaude(userMessage, userId, chatHistory, retryCount + 1);
     }
 
     if (response.status === 524 || response.status === 504) {
       errorMsg = '请求超时，请稍后重试';
+    } else if (response.status === 502) {
+      errorMsg = '上游服务错误，请稍后重试';
     } else if (errorText) {
       errorMsg += ` - ${errorText}`;
     }
