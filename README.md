@@ -39,10 +39,10 @@ cp config.json.example config.json
   },
   "claude": {
     "api_key": "your_claude_api_key",
-    "base_url": "https://api.53hk.cn",
-    "model": "MiniMax-M2.7-highspeed"
+    "base_url": "model url",
+    "model": "MiniMax-M2.7"
   },
-  "projects_root": "/Users/terry/.claude/projects"
+  "projects_root": "your project path"
 }
 ```
 
